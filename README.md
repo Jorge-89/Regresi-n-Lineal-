@@ -16,7 +16,8 @@ El modelo de regresión lineal múltiple es idéntico al modelo de regresión li
 
 
 Para realizar un análisis de regresión lineal múltiple se hacen las siguientes consideraciones sobre los datos:
-a) Linealidad: 
+
+a) Linealidad 
 
 b) Homocedasticidad: todas las perturbaciones tienen las misma varianza.
 
