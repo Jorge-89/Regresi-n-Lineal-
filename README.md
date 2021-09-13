@@ -1,4 +1,4 @@
-# Regresion-Lineal
+# Regresión-Lineal
 
 En estadística la regresión lineal o ajuste lineal es un método matemático que modela la relación entre una variable dependiente con las variables independientes, junto con un término aleatorio.
 En la práctica deberemos de elegir cuidadosamente qué variables vamos a considerar como explicativas (independientes).
