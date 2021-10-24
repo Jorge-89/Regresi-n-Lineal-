@@ -1,0 +1,556 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Untitled15.ipynb",
+      "provenance": [],
+      "authorship_tag": "ABX9TyM5WKFsGLTW6cUaJx0MUF7T",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Jorge-89/Regresion-Lineal-/blob/main/XGBoost_Regresionipynb\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ZHJJAg6qEhxm"
+      },
+      "source": [
+        "# importo librerias necesarias\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "from sklearn.metrics import mean_squared_error as mse\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "import xgboost\n",
+        "from xgboost import XGBRegressor\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.model_selection import GridSearchCV\n",
+        "from sklearn.preprocessing import StandardScaler\n",
+        "from sklearn.model_selection import cross_val_score\n",
+        "import matplotlib.pyplot as plt\n",
+        "from sklearn.model_selection import RandomizedSearchCV"
+      ],
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "cpv-Xs69Eujh",
+        "outputId": "607a6635-2b27-4637-91bd-c95394008e3d"
+      },
+      "source": [
+        "#se importa el set de datos\n",
+        "url = 'https://raw.githubusercontent.com/Jorge-89/Regresion-Lineal-/main/base_datos_estaciones_met_V3_train.csv'\n",
+        "df = pd.read_csv(url, sep=\",\")\n",
+        "df.columns"
+      ],
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "Index(['Unnamed: 0', 'fecha_completa', 'Fecha', 'Hora',\n",
+              "       'Temp_Alicia AgriculturaCba', 'Humedad_Alicia AgriculturaCba',\n",
+              "       'PP_Alicia AgriculturaCba', 'Temp_Las Varas AgriculturaCba',\n",
+              "       'Humedad_Las Varas AgriculturaCba', 'PP_Las Varas AgriculturaCba',\n",
+              "       'Temp_San Miguel - Establecimiento Don Luis',\n",
+              "       'Humedad_San Miguel - Establecimiento Don Luis',\n",
+              "       'PP_San Miguel - Establecimiento Don Luis',\n",
+              "       'Temp_San Miguel - Listello', 'Humedad_San Miguel - Listello',\n",
+              "       'PP_San Miguel - Listello', 'Temp_ San Miguel - Las Varillas',\n",
+              "       'Humedad_ San Miguel - Las Varillas', 'PP_ San Miguel - Las Varillas'],\n",
+              "      dtype='object')"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 3
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "AmQ_yjyTsq3F"
+      },
+      "source": [
+        "x= df[[ 'Temp_Las Varas AgriculturaCba', 'Humedad_Las Varas AgriculturaCba',\n",
+        "        'Temp_San Miguel - Establecimiento Don Luis', 'Humedad_San Miguel - Establecimiento Don Luis',\n",
+        "       'Temp_San Miguel - Listello', 'Humedad_San Miguel - Listello',\n",
+        "       'Temp_ San Miguel - Las Varillas', 'Humedad_ San Miguel - Las Varillas']]\n",
+        "y= df[\"Temp_Alicia AgriculturaCba\"]\n"
+      ],
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KVm5S36LE1QM"
+      },
+      "source": [
+        "#Separo los datos de \"train\" en entrenamiento y prueba \"test\" para probar los algoritmos\n",
+        "x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)"
+      ],
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "WkIxpT_EE3or",
+        "outputId": "47f699ca-db31-41b6-cca3-881e946223e7"
+      },
+      "source": [
+        "clf = XGBRegressor()\n",
+        "#params={'max_depth':[7,8,9,10,11],'learning_rate':[0.0,0.1,0.01,0.005], 'gamma':[0.0,0.1,0.01,0.005],'reg_lambda':[0.0,0.1,0.01,0.005], 'reg_alpha':[0.0,0.1,0.01,0.005],'n_estimators':[100,300,650,700]}\n",
+        "\n",
+        "params = [{'objective':['reg:squarederror'],'min_child_weight':[2,3,4,5], 'gamma':[i/10.0 for i in range(3,12)],  'subsample':[i/10.0 for i in range(6,10)],\n",
+        "'colsample_bytree':[i/10.0 for i in range(6,11)], 'max_depth': [6,9,11,13], 'n_estimators':[100,400,700]},{'objective':['reg:linear'],'min_child_weight':[2,3,4,5], 'gamma':[i/10.0 for i in range(3,12)],  'subsample':[i/10.0 for i in range(6,10)],\n",
+        "'colsample_bytree':[i/10.0 for i in range(6,11)], 'max_depth': [6,9,11,13], 'n_estimators':[100,400,700]}]\n",
+        "\n",
+        "grilla=RandomizedSearchCV(clf,params,cv=5,scoring='neg_mean_squared_error', verbose=3)\n",
+        "grilla.fit(x_train,y_train)\n",
+        "\n",
+        "\n"
+      ],
+      "execution_count": 47,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Fitting 5 folds for each of 10 candidates, totalling 50 fits\n",
+            "[CV] subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6 \n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[Parallel(n_jobs=1)]: Using backend SequentialBackend with 1 concurrent workers.\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[CV]  subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6, score=-0.478, total=   0.5s\n",
+            "[CV] subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6 \n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[Parallel(n_jobs=1)]: Done   1 out of   1 | elapsed:    0.5s remaining:    0.0s\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[CV]  subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6, score=-0.508, total=   0.5s\n",
+            "[CV] subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6 \n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[Parallel(n_jobs=1)]: Done   2 out of   2 | elapsed:    1.0s remaining:    0.0s\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[CV]  subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6, score=-0.450, total=   0.5s\n",
+            "[CV] subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6 \n",
+            "[CV]  subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6, score=-0.498, total=   0.5s\n",
+            "[CV] subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6 \n",
+            "[CV]  subsample=0.7, objective=reg:squarederror, n_estimators=100, min_child_weight=3, max_depth=6, gamma=0.6, colsample_bytree=0.6, score=-0.510, total=   0.5s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:35:10] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7, score=-0.411, total=   0.9s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:35:11] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7, score=-0.426, total=   0.9s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:35:12] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7, score=-0.390, total=   0.9s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:35:13] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7, score=-0.425, total=   0.9s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:35:14] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=100, min_child_weight=2, max_depth=11, gamma=0.6, colsample_bytree=0.7, score=-0.448, total=   0.9s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.383, total=   4.2s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.396, total=   4.1s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.356, total=   4.2s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.402, total=   4.1s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=3, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.419, total=   4.1s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.392, total=   2.8s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.404, total=   2.9s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.390, total=   2.8s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.413, total=   2.8s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=4, max_depth=6, gamma=0.3, colsample_bytree=1.0, score=-0.427, total=   2.9s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7, score=-0.390, total=   2.2s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7, score=-0.435, total=   2.2s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7, score=-0.394, total=   2.2s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7, score=-0.433, total=   2.2s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=400, min_child_weight=2, max_depth=6, gamma=0.6, colsample_bytree=0.7, score=-0.464, total=   2.2s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0, score=-0.458, total=   0.7s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0, score=-0.484, total=   0.7s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0, score=-0.444, total=   0.7s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0, score=-0.481, total=   0.7s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=2, max_depth=6, gamma=0.8, colsample_bytree=1.0, score=-0.493, total=   0.7s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8 \n",
+            "[21:36:04] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8, score=-0.383, total=   4.3s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8 \n",
+            "[21:36:08] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8, score=-0.390, total=   4.3s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8 \n",
+            "[21:36:13] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8, score=-0.360, total=   4.2s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8 \n",
+            "[21:36:17] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8, score=-0.388, total=   4.2s\n",
+            "[CV] subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8 \n",
+            "[21:36:21] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.7, objective=reg:linear, n_estimators=400, min_child_weight=2, max_depth=11, gamma=0.3, colsample_bytree=0.8, score=-0.410, total=   4.3s\n",
+            "[CV] subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:36:25] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7, score=-0.408, total=   0.7s\n",
+            "[CV] subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:36:26] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7, score=-0.440, total=   0.7s\n",
+            "[CV] subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:36:27] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7, score=-0.402, total=   0.7s\n",
+            "[CV] subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:36:27] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7, score=-0.432, total=   0.7s\n",
+            "[CV] subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7 \n",
+            "[21:36:28] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.\n",
+            "[CV]  subsample=0.9, objective=reg:linear, n_estimators=100, min_child_weight=3, max_depth=9, gamma=0.6, colsample_bytree=0.7, score=-0.462, total=   0.7s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9, score=-0.448, total=   0.6s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9, score=-0.489, total=   0.6s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9, score=-0.450, total=   0.6s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9, score=-0.491, total=   0.6s\n",
+            "[CV] subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.6, objective=reg:squarederror, n_estimators=100, min_child_weight=4, max_depth=6, gamma=1.1, colsample_bytree=0.9, score=-0.501, total=   0.7s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9, score=-0.384, total=   8.3s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9, score=-0.393, total=   8.1s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9, score=-0.354, total=   8.2s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9, score=-0.394, total=   8.2s\n",
+            "[CV] subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9 \n",
+            "[CV]  subsample=0.9, objective=reg:squarederror, n_estimators=700, min_child_weight=2, max_depth=13, gamma=0.6, colsample_bytree=0.9, score=-0.390, total=   8.0s\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[Parallel(n_jobs=1)]: Done  50 out of  50 | elapsed:  2.1min finished\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "RandomizedSearchCV(cv=5, error_score=nan,\n",
+              "                   estimator=XGBRegressor(base_score=0.5, booster='gbtree',\n",
+              "                                          colsample_bylevel=1,\n",
+              "                                          colsample_bynode=1,\n",
+              "                                          colsample_bytree=1, gamma=0,\n",
+              "                                          importance_type='gain',\n",
+              "                                          learning_rate=0.1, max_delta_step=0,\n",
+              "                                          max_depth=3, min_child_weight=1,\n",
+              "                                          missing=None, n_estimators=100,\n",
+              "                                          n_jobs=1, nthread=None,\n",
+              "                                          objective='reg:linear',\n",
+              "                                          random_state=0, reg_alpha=...\n",
+              "                                        {'colsample_bytree': [0.6, 0.7, 0.8,\n",
+              "                                                              0.9, 1.0],\n",
+              "                                         'gamma': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8,\n",
+              "                                                   0.9, 1.0, 1.1],\n",
+              "                                         'max_depth': [6, 9, 11, 13],\n",
+              "                                         'min_child_weight': [2, 3, 4, 5],\n",
+              "                                         'n_estimators': [100, 400, 700],\n",
+              "                                         'objective': ['reg:linear'],\n",
+              "                                         'subsample': [0.6, 0.7, 0.8, 0.9]}],\n",
+              "                   pre_dispatch='2*n_jobs', random_state=None, refit=True,\n",
+              "                   return_train_score=False, scoring='neg_mean_squared_error',\n",
+              "                   verbose=3)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 47
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "sJn4DErDHzNu",
+        "outputId": "56255164-a077-42f6-aa85-6a42ebf4a794"
+      },
+      "source": [
+        "grilla.best_params_"
+      ],
+      "execution_count": 48,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "{'colsample_bytree': 0.9,\n",
+              " 'gamma': 0.6,\n",
+              " 'max_depth': 13,\n",
+              " 'min_child_weight': 2,\n",
+              " 'n_estimators': 700,\n",
+              " 'objective': 'reg:squarederror',\n",
+              " 'subsample': 0.9}"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 48
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "SwQiIVwIH3kg",
+        "outputId": "9baf07f6-2cb4-4e27-ce1d-c9c4ae60e611"
+      },
+      "source": [
+        "grilla.best_score_"
+      ],
+      "execution_count": 49,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "-0.3829972175237742"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 49
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "PfUKGmq6H4o6",
+        "outputId": "91414aa0-dc5b-4038-e6ea-23cfdd615e8d"
+      },
+      "source": [
+        "# Fit best model\n",
+        "modelo=grilla.best_estimator_\n",
+        "modelo.fit(x_train, y_train)"
+      ],
+      "execution_count": 51,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "XGBRegressor(base_score=0.5, booster='gbtree', colsample_bylevel=1,\n",
+              "             colsample_bynode=1, colsample_bytree=0.9, gamma=0.6,\n",
+              "             importance_type='gain', learning_rate=0.1, max_delta_step=0,\n",
+              "             max_depth=13, min_child_weight=2, missing=None, n_estimators=700,\n",
+              "             n_jobs=1, nthread=None, objective='reg:squarederror',\n",
+              "             random_state=0, reg_alpha=0, reg_lambda=1, scale_pos_weight=1,\n",
+              "             seed=None, silent=None, subsample=0.9, verbosity=1)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 51
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "H3Vgv-SHH83e",
+        "outputId": "517337ca-5975-4611-967c-708d827244a6"
+      },
+      "source": [
+        "y_pred_test = modelo.predict(x_test)\n",
+        "y_pred_test"
+      ],
+      "execution_count": 43,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([24.511826, 26.948545, 14.555526, ..., 33.86751 , 27.062204,\n",
+              "       28.514076], dtype=float32)"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 43
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "rnSyVN8pH_FW",
+        "outputId": "47130fa2-fca4-41bc-c069-d766e7964180"
+      },
+      "source": [
+        "y_test"
+      ],
+      "execution_count": 14,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "1803     24.9\n",
+              "321      27.0\n",
+              "7317     14.7\n",
+              "8065     20.8\n",
+              "10056    14.1\n",
+              "         ... \n",
+              "5684     16.6\n",
+              "8437     19.1\n",
+              "1897     34.2\n",
+              "5719     26.9\n",
+              "9508     28.6\n",
+              "Name: Temp_Alicia AgriculturaCba, Length: 2074, dtype: float64"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 14
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ozwlDs4qICQM",
+        "outputId": "9712f0f0-b05d-4455-f91b-83ed59215099"
+      },
+      "source": [
+        "#se puede usar scoring='neg_root_mean_squared_error' tambien que seria la raiz\n",
+        "MSE_modelo=cross_val_score(modelo,x_test,y_test,cv=5,scoring='neg_mean_squared_error')\n",
+        "errores = -MSE_modelo\n",
+        "MSE_modelo\n"
+      ],
+      "execution_count": 52,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([-0.4940346 , -0.60151361, -0.67899444, -0.52454019, -0.67865104])"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 52
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pFs1IKtcIDWS",
+        "outputId": "dcc1bac6-9ab4-4f77-ff5e-b56dcda6eb38"
+      },
+      "source": [
+        "print(errores.mean(), errores.std())"
+      ],
+      "execution_count": 53,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "0.5955467754217794 0.07648802732373422\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
